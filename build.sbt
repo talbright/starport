@@ -20,8 +20,10 @@ val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           
 val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "2.2.1"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.0"
 
+scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports")
+
 lazy val commonSettings = Seq(
-  scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
+  scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint"),
   scalaVersion := "2.12.8",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
@@ -32,12 +34,14 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(name := "starport").
-  aggregate(core,lambda)
+  aggregate(core,lambda,service)
 
 lazy val core = (project in file("starport-core")).
   settings(commonSettings: _*).
+
   enablePlugins(BuildInfoPlugin).
   settings(
+    scalacOptions ++= Seq("-Xfatal-warnings"),
     name := "starport-core",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.krux.starport",
@@ -66,13 +70,28 @@ lazy val core = (project in file("starport-core")).
 lazy val lambda = (project in file("starport-lambda")).
   settings(commonSettings: _*).
   settings(
+    scalacOptions ++= Seq("-Xfatal-warnings"),
     name := "starport-lambda",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "com.krux.starport",
+    buildInfoPackage := "com.krux.starport.lambda",
     assemblyJarName in assembly := "starport-lambda.jar",
     libraryDependencies ++= Seq(
       awsLambdaCore,
       awsLambdaEvents,
+    ),
+    fork := true
+  ).dependsOn(core)
+
+lazy val service = (project in file("starport-service")).
+  enablePlugins(PlayScala).
+  settings(commonSettings: _*).
+  settings(
+    name := "starport-service",
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.krux.starport.service",
+    assemblyJarName in assembly := "starport-service.jar",
+    libraryDependencies ++= Seq(
+      guice
     ),
     fork := true
   ).dependsOn(core)
